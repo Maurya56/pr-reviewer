@@ -1,5 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { callerExtensions, extractFunctions, findCallSites, languageFor, parse, type Language } from "../src/symbols.js";
+import {
+  callerExtensions,
+  compactName,
+  extractFunctions,
+  findCallSites,
+  languageFor,
+  parse,
+  type Language,
+} from "../src/symbols.js";
+
+describe("compactName", () => {
+  it("collapses whitespace and shortens long template arguments", () => {
+    expect(compactName("formatter<Tuple, Char,\n    enable_if_t<fmt::is_tuple_like<Tuple>::value>>::parse")).toBe(
+      "formatter<Tuple, Char, enable_…>::parse",
+    );
+  });
+
+  it("leaves short templates, plain names, and operators alone", () => {
+    expect(compactName("Book<T>::match")).toBe("Book<T>::match");
+    expect(compactName("Command.main")).toBe("Command.main");
+    expect(compactName("operator<<")).toBe("operator<<");
+  });
+});
 
 const functions = async (language: Language, source: string) =>
   extractFunctions(await parse(source, language), language).map(({ qualifiedName, startLine, endLine, calls }) => ({
@@ -106,6 +128,19 @@ describe("extractFunctions", () => {
     expect(result.map((f) => [f.qualifiedName, f.calls])).toEqual([
       ["Book::match", ["fill"]],
       ["Cache::put", ["insert"]],
+    ]);
+  });
+
+  it("cpp: methods of a multi-line template specialization get a one-line name", async () => {
+    const src = [
+      "template <typename T>",
+      "struct formatter<T, char,",
+      "                 enable_if_t<is_tuple_like<T>::value>> {",
+      "  auto parse(ctx& c) { return c.begin(); }",
+      "};",
+    ].join("\n");
+    expect((await functions("cpp", src)).map((f) => f.qualifiedName)).toEqual([
+      "formatter<T, char, enable_if_t…>::parse",
     ]);
   });
 });

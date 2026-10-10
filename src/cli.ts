@@ -4,7 +4,6 @@
 import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
-import { parseArgs } from "node:util";
 import { buildCallGraph, type ChangedFunction } from "./callgraph.js";
 import { computeSize, estimateTokens, orderForReading, renderContext } from "./context.js";
 import { getCommits, getRawDiff, git, parseDiff, resolveBaseRef } from "./diff.js";
@@ -21,6 +20,50 @@ Options:
   --out     Output file (default: .pr-reviewer/out/context.md)
   --stdout  Print the context instead of writing a file
   -h, --help`;
+
+export interface CliArgs {
+  command?: string;
+  base: string;
+  out: string;
+  stdout: boolean;
+  help: boolean;
+}
+
+/**
+ * Parse argv. Hand-rolled rather than `util.parseArgs`, which needs Node 18.3; the CLI supports
+ * Node 14.18+. Accepts `--flag value`, `--flag=value`, and `-h`. Throws on unknown options.
+ */
+export function parseCliArgs(argv: string[]): CliArgs {
+  const args: CliArgs = { base: "main", out: ".pr-reviewer/out/context.md", stdout: false, help: false };
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i] ?? "";
+    const eq = arg.indexOf("=");
+    const name = arg.startsWith("--") && eq > 0 ? arg.slice(0, eq) : arg;
+    const inline = arg.startsWith("--") && eq > 0 ? arg.slice(eq + 1) : undefined;
+    const value = () => {
+      if (inline !== undefined) return inline;
+      const next = argv[++i];
+      if (next === undefined || next.startsWith("-")) throw new Error(`${name} needs a value`);
+      return next;
+    };
+    if (name === "--base") args.base = value();
+    else if (name === "--out") args.out = value();
+    else if (name === "--stdout") args.stdout = true;
+    else if (name === "--help" || name === "-h") args.help = true;
+    else if (name.startsWith("-")) throw new Error(`Unknown option: ${name}`);
+    else if (args.command === undefined) args.command = name;
+    else throw new Error(`Unexpected argument: ${name}`);
+  }
+  return args;
+}
+
+/** "36% smaller", or "2.0× larger: call graph added" when the context outgrows a small diff. */
+export function sizeChange(rawTokens: number, contextTokens: number): string {
+  if (rawTokens === 0 || contextTokens <= rawTokens) {
+    return `${rawTokens === 0 ? 0 : Math.round((1 - contextTokens / rawTokens) * 100)}% smaller`;
+  }
+  return `${(contextTokens / rawTokens).toFixed(1)}× larger: call graph added`;
+}
 
 export interface ContextResult {
   markdown: string;
@@ -60,18 +103,15 @@ export async function buildContext(base: string, cwd?: string): Promise<ContextR
 }
 
 export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
-  const { values, positionals } = parseArgs({
-    args: argv,
-    allowPositionals: true,
-    options: {
-      base: { type: "string", default: "main" },
-      out: { type: "string", default: ".pr-reviewer/out/context.md" },
-      stdout: { type: "boolean", default: false },
-      help: { type: "boolean", short: "h", default: false },
-    },
-  });
+  let values: CliArgs;
+  try {
+    values = parseCliArgs(argv);
+  } catch (error) {
+    console.error(`${error instanceof Error ? error.message : String(error)}\n\n${USAGE}`);
+    return 1;
+  }
 
-  const [command] = positionals;
+  const { command } = values;
   if (values.help || !command) {
     console.log(USAGE);
     return 0;
@@ -86,7 +126,6 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
       return 1;
     }
     const { markdown, rawTokens, contextTokens } = result;
-    const saved = rawTokens === 0 ? 0 : Math.round((1 - contextTokens / rawTokens) * 100);
     if (values.stdout) {
       process.stdout.write(markdown);
     } else {
@@ -94,7 +133,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
       writeFileSync(values.out, markdown);
       console.error(`Wrote ${values.out}`);
     }
-    console.error(`Raw diff ~${rawTokens} tokens → context ~${contextTokens} tokens (${saved}% smaller)`);
+    console.error(`Raw diff ~${rawTokens} tokens → context ~${contextTokens} tokens (${sizeChange(rawTokens, contextTokens)})`);
     return 0;
   }
 

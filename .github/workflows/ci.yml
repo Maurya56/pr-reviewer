@@ -21,3 +21,19 @@ jobs:
       - run: npm test
       - name: Generated prompt files are up to date
         run: npm run build:skill && git diff --exit-code
+
+  # The CLI supports Node 14.18+, but vitest and TypeScript need a newer Node, so build on 20 and
+  # smoke-test the built CLI on 14.
+  node14:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 14
+      - run: node -v && scripts/smoke.sh

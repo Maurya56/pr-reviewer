@@ -98,6 +98,32 @@ function declaratorName(node: Node | null): string | undefined {
   return undefined;
 }
 
+/**
+ * A one-line display name: whitespace collapsed and long template argument lists shortened,
+ * e.g. a multi-line `formatter<Tuple, Char, enable_if_t<...>>` -> `formatter<Tuple, Char, enable_…>`.
+ */
+export function compactName(text: string): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  if (flat.includes("operator")) return flat; // `operator<<` would confuse the bracket count
+  let out = "";
+  let depth = 0;
+  let inner = 0;
+  for (const ch of flat) {
+    if (ch === "<" && ++depth === 1) {
+      out += ch;
+      inner = 0;
+      continue;
+    }
+    if (ch === ">" && --depth === 0) {
+      out += inner > 20 ? "…>" : ">";
+      continue;
+    }
+    if (depth === 0) out += ch;
+    else if (++inner <= 20) out += ch;
+  }
+  return out;
+}
+
 /** Go method receiver type, e.g. `(s *Server)` -> `*Server`. */
 function goReceiver(node: Node): string | undefined {
   const param = node.childForFieldName("receiver")?.namedChildren.find((c) => c.type === "parameter_declaration");
@@ -154,14 +180,17 @@ export function extractFunctions(root: Node, language: Language): FunctionSymbol
   const found: FunctionSymbol[] = [];
   const visit = (node: Node, scope: string[]) => {
     if (CLASS_TYPES.has(node.type)) {
-      const className = node.childForFieldName("name")?.text;
+      const rawName = node.childForFieldName("name")?.text;
+      const className = rawName === undefined ? undefined : compactName(rawName);
       for (const child of node.namedChildren) visit(child, className ? [...scope, className] : scope);
       return;
     }
     const name = FUNCTION_TYPES[language].has(node.type) ? functionName(node, language) : undefined;
     if (name) {
       const receiver = node.type === "method_declaration" ? goReceiver(node) : undefined;
-      const qualifiedName = receiver ? `(${receiver}).${name}` : [...scope, name].join(language === "cpp" ? "::" : ".");
+      const qualifiedName = compactName(
+        receiver ? `(${receiver}).${name}` : [...scope, name].join(language === "cpp" ? "::" : "."),
+      );
       found.push({
         name: name.includes("::") ? name.slice(name.lastIndexOf("::") + 2) : name,
         qualifiedName,
@@ -214,7 +243,7 @@ function grammarPath(language: Language): string {
 }
 
 export async function parse(source: string, language: Language): Promise<Node> {
-  ready ??= Parser.init();
+  if (!ready) ready = Parser.init(); // not `??=`: that's a syntax error before Node 15
   await ready;
   let lang = languages.get(language);
   if (!lang) {

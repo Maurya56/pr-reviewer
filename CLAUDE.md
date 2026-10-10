@@ -36,7 +36,8 @@ skill, Codex, the GitHub Action) must use that prompt rather than keep its own c
   reading order, rendering, `symbols.ts` tree-sitter parsing (pure), `callgraph.ts` changed functions and callers
   (git I/O), `cli.ts` entry point
 - `grammars/`: tree-sitter wasm files copied from the `tree-sitter-wasms` dev dependency at build (gitignored).
-  `web-tree-sitter` is pinned to 0.22.6 to match those grammars; upgrade both together or loading breaks.
+  `web-tree-sitter` is pinned to 0.20.8: it matches those grammars (built with tree-sitter 0.20.8), and newer
+  versions use ES2021 syntax (`||=`, `??=`) that breaks Node 14. Upgrade both together or loading breaks.
 - `scripts/compare.sh`: plain review vs pr-reviewer, side by side
 - `test/`: vitest tests
 - `examples/`: real review outputs, before/after
@@ -53,7 +54,9 @@ the `knowledge` field. The prompt documents it in Step 2b; any CLI code that rea
 
 ## Conventions
 
-- TypeScript, Node 20+, ESM (`"type": "module"`, `.js` extensions in relative imports).
+- TypeScript, ESM (`"type": "module"`, `.js` extensions in relative imports).
+- The CLI must run on **Node 14.18+**: TS target/lib ES2020, no `util.parseArgs`, no `??=`/`||=`. Building and
+  testing need Node 18+ (vitest, TypeScript). `scripts/smoke.sh` checks the built CLI; CI runs it on Node 14.
 - Small, focused modules. Pure functions where possible; keep git and file I/O at the edges.
 - Tests with vitest in `test/`. Run `npm test` and `npm run typecheck` before declaring work done.
 - Keep the noise list in `src/filter.ts` and `prompts/review.md` in sync.

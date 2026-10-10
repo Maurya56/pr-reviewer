@@ -68,7 +68,7 @@ It may be listed as `/pr-reviewer:explain-pr`, which also works. You can also ju
 this PR against main".
 
 **Make it faster and cheaper:** install the context CLI so the review gets everything in one
-call instead of a dozen (Node 20+):
+call instead of a dozen (Node 14.18 or newer):
 
 ```bash
 npm install -g github:theaiowlandswan/pr-reviewer    # provides `pr-reviewer`
@@ -205,7 +205,7 @@ checkouts to `permissions.additionalDirectories` in your settings, or run `/add-
 
 ## Development
 
-Requires Node 20+.
+The `pr-reviewer` CLI runs on Node 14.18 or newer. Developing it (building, tests) needs Node 18+.
 
 ```bash
 npm install          # also builds dist/ and copies the tree-sitter grammars

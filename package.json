@@ -18,7 +18,7 @@
     "prompts"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=14.18"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/copy-grammars.mjs",
@@ -35,6 +35,6 @@
     "vitest": "^3.2.7"
   },
   "dependencies": {
-    "web-tree-sitter": "0.22.6"
+    "web-tree-sitter": "0.20.8"
   }
 }

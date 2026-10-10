@@ -3,7 +3,44 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { buildContext } from "../src/cli.js";
+import { buildContext, parseCliArgs, sizeChange } from "../src/cli.js";
+
+describe("sizeChange", () => {
+  it("reports savings, and growth honestly when the call graph outweighs a small diff", () => {
+    expect(sizeChange(1000, 640)).toBe("36% smaller");
+    expect(sizeChange(1000, 2010)).toBe("2.0× larger: call graph added");
+    expect(sizeChange(0, 0)).toBe("0% smaller");
+  });
+});
+
+describe("parseCliArgs", () => {
+  it("uses defaults", () => {
+    expect(parseCliArgs(["context"])).toEqual({
+      command: "context",
+      base: "main",
+      out: ".pr-reviewer/out/context.md",
+      stdout: false,
+      help: false,
+    });
+  });
+
+  it("accepts --flag value, --flag=value, booleans, and -h", () => {
+    expect(parseCliArgs(["context", "--base", "develop", "--out=ctx.md", "--stdout", "-h"])).toMatchObject({
+      command: "context",
+      base: "develop",
+      out: "ctx.md",
+      stdout: true,
+      help: true,
+    });
+  });
+
+  it("rejects unknown options, missing values, and extra arguments", () => {
+    expect(() => parseCliArgs(["context", "--nope"])).toThrow("Unknown option: --nope");
+    expect(() => parseCliArgs(["context", "--base"])).toThrow("--base needs a value");
+    expect(() => parseCliArgs(["context", "--base", "--stdout"])).toThrow("--base needs a value");
+    expect(() => parseCliArgs(["context", "extra"])).toThrow("Unexpected argument: extra");
+  });
+});
 
 // End to end against a real throwaway repo: a feature branch with logic, a test, and a lockfile.
 describe("buildContext", () => {
