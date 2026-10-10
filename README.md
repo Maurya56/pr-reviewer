@@ -36,18 +36,21 @@ Install it as a plugin, inside Claude Code:
 Then check out the PR branch in any repo and run:
 
 ```text
-/pr-reviewer:explain-pr            # diff against main
-/pr-reviewer:explain-pr develop    # diff against another base branch
+/explain-pr            # diff against main
+/explain-pr develop    # diff against another base branch
 ```
 
-**Hacking on the prompt?** Link the skill instead, so edits to `prompts/review.md` take effect
-immediately (the command is then plain `/explain-pr`). Don't install both, or you'll get two
-copies of the command:
+It may be listed as `/pr-reviewer:explain-pr`, which also works. You can also just ask "explain
+this PR against main".
+
+**Hacking on the prompt?** Link it instead of installing the plugin, so edits to
+`prompts/review.md` take effect immediately. Don't do both, or you'll get two copies of the command:
 
 ```bash
 git clone https://github.com/Maurya56/pr-reviewer.git
-mkdir -p ~/.claude/skills
+mkdir -p ~/.claude/skills ~/.claude/commands
 ln -s "$PWD/pr-reviewer/skills/explain-pr" ~/.claude/skills/explain-pr
+ln -s "$PWD/pr-reviewer/commands/explain-pr.md" ~/.claude/commands/explain-pr.md
 ```
 
 The prompt itself is plain markdown in [`prompts/review.md`](prompts/review.md), so you can also
