@@ -29,7 +29,8 @@ run with [`scripts/compare.sh`](scripts/compare.sh). Read both reviews side by s
 | Praise and filler words ("excellent", "comprehensive", ✅ ...) | 18 | **1** |
 | Callers of the changed function, with file and line | not covered | **both found** |
 
-One PR, one run each, so read it as direction, not an average. Run it on your own PRs (below).
+One PR, one run each, so read it as direction, not an average. A 17-PR evaluation covering 12
+kinds of review is in [`eval/`](eval/README.md) (below); its first full results are pending.
 
 ## What you get
 
@@ -75,7 +76,8 @@ npm install -g github:theaiowlandswan/pr-reviewer    # provides `pr-reviewer`
 ```
 
 The review uses it automatically when it's on your PATH, and falls back to plain git commands
-when it isn't.
+when it isn't. Install it from GitHub as shown: the npm package named `pr-reviewer` is a
+different project.
 
 **Hacking on the prompt?** Link it instead of installing the plugin, so your edits take effect
 right away (run `npm run build:skill` after editing `prompts/review.md`). Don't do both, or
@@ -163,6 +165,27 @@ cd your-repo && git switch your-pr-branch
 # or: ~/pr-reviewer/scripts/compare.sh main                           # cloned repo
 ```
 
+Add `--runs 3` to run each review three times: model output varies between runs, and the summary
+shows the spread.
+
+## Evaluation
+
+[`eval/`](eval/README.md) measures pr-reviewer against a plain review on 17 real public PRs that
+together cover 12 kinds of review: a small fix, a shared-API change, a refactor, a bug fix,
+deleted code, concurrency, a build migration, a tangled PR, a big feature, a lot of new code, an
+AI agent's PR checked against the issue it was given, and an unfamiliar C++ codebase. Three are
+known-buggy: merged, then fixed by a later PR. 12 of the 17 were merged after the model's
+training cutoff, so it can't already know them.
+
+Each PR has comprehension questions with answers checked against the code, and each review is
+scored on comprehension, whether it found the real bug, false findings, cost, and length. Each PR
+is fetched into its own repo with only the history up to that PR, so a later fix commit can't
+leak into the review.
+
+```bash
+npm run build && eval/run.sh --runs 1 --judge    # all 17 PRs once, with blind AI pre-scoring
+```
+
 ## Reviewing across repositories
 
 If your PR calls into code from other repos, the review reads that code's source so it isn't
@@ -199,9 +222,16 @@ checkouts to `permissions.additionalDirectories` in your settings, or run `/add-
 - [x] **Cross-repo context** (prompt level): read code the PR calls into from other repos, find code in other repos that uses what it changes
 - [x] **Phase 2:** tree-sitter call graph for Python, TS/JS, Go, C/C++ (changed functions, 1-hop callers and callees)
 - [x] **Phase 3:** Claude Code plugin, GitHub Action, Codex prompt
+- [x] **Node 14.18+** support for the CLI
+- [x] **Evaluation:** 17 PRs across 12 review cases, isolated repos, scoring sheet ([eval](eval/README.md))
+- [ ] **Baseline results** from the full evaluation, before the features below
+- [ ] **Untangle:** split a PR into its separate changes and say which ones change behaviour
+- [ ] **Checks done by code, not the model:** callers the PR didn't update as findings, PR
+      description vs diff, new packages that don't exist, a bug-fix test that doesn't fail before the fix
+- [ ] **Impact map** for changes to existing code, and a **guided tour** for new code
+- [ ] **Reviewer check:** a few questions for the reviewer before the summary
 - [ ] **Phase 1.5:** repo knowledge ([design](docs/knowledge.md))
 - [ ] Call graph across repos listed in `.pr-reviewer.json`
-- [ ] Benchmark: 3-5 fixture PRs, several runs each, tokens and quality scores
 
 ## Development
 
@@ -212,6 +242,7 @@ npm install          # also builds dist/ and copies the tree-sitter grammars
 npm test
 npm run typecheck
 npm run build:skill  # after editing prompts/review.md: regenerates the skill, command, and Codex prompt
+scripts/smoke.sh     # end-to-end check of the built CLI on whatever `node` is on PATH
 ```
 
 ## License
