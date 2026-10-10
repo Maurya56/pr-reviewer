@@ -3,8 +3,12 @@
 Measures pr-reviewer against a plain Claude review on real public PRs, before and after any
 product change.
 
-- `manifest.json`: the PRs. Five tangled (10+ files, refactor mixed with features) and three
-  known-buggy (merged, later fixed by another PR, recorded under `fix`).
+- `manifest.json`: 17 PRs covering all 12 review cases from the research doc (each PR lists its
+  `cases`; the case names are at the bottom of the file). Five are tangled (10+ files, refactor
+  mixed with features), three are known-buggy (merged, later fixed by another PR, recorded under
+  `fix`), and nine were picked for a single case, including an AI-agent PR with the issue it was
+  asked to solve (`ask`) and a C++ PR. 12 of the 17 were merged after the model's training
+  cutoff.
 - `<id>/questions.md`: 3-5 comprehension questions with answers and scoring rubrics, and for
   buggy PRs the known bug, quoted from the fix commit.
 - `run.sh`: fetches each PR into its own repo and runs `scripts/compare.sh` on it.
@@ -23,8 +27,9 @@ eval/run.sh --judge                    # also pre-fill scores with the AI judge
 
 Results land in `eval/results/<timestamp>/`: one folder per PR with each review (`plain.md`,
 `explain-pr.md`), its raw JSON, `results.json`, and `summary.md`. The folder also holds
-`scoring.csv` and `scoring.md` for all PRs. A full run is 8 PRs × 2 variants × 3 runs = 48
-reviews, roughly $8-15 and 1-2 hours.
+`scoring.csv` and `scoring.md` for all PRs. A full run is 17 PRs × 2 variants × 3 runs = 102
+reviews, roughly $20-35 and 2-4 hours; `--runs 1` is about a third of that. C10 (zod #6085,
++8,818 lines) is by far the most expensive single PR.
 
 ## Why each PR gets its own repo
 

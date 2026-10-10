@@ -17,7 +17,7 @@ import sys
 
 EVAL = pathlib.Path(__file__).resolve().parent
 COLUMNS = [
-    "pr", "kind", "run", "variant", "status", "cost_usd", "turns", "duration_s", "words", "slop_words",
+    "pr", "kind", "cases", "run", "variant", "status", "cost_usd", "turns", "duration_s", "words", "slop_words",
     "problems_listed", "comprehension", "comprehension_max", "bug_surfaced", "false_findings",
     "true_findings", "signal_ratio", "notes",
 ]
@@ -41,10 +41,11 @@ def main() -> None:
         pr_dir = results_file.parent
         data = json.loads(results_file.read_text())
         kind = manifest.get(pr_dir.name, {}).get("kind", "?")
+        cases = " ".join(str(c) for c in manifest.get(pr_dir.name, {}).get("cases", []))
         qmax = question_count(pr_dir.name)
         for r in data["results"]:
             row = {c: "" for c in COLUMNS}
-            row.update(pr=pr_dir.name, kind=kind, run=r["run"], variant=r["variant"], status=r["status"],
+            row.update(pr=pr_dir.name, kind=kind, cases=cases, run=r["run"], variant=r["variant"], status=r["status"],
                        comprehension_max=qmax * 2)
             for k in ("cost_usd", "turns", "duration_s", "words", "slop_words"):
                 row[k] = r.get(k, "")
