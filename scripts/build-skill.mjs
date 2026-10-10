@@ -1,57 +1,73 @@
-// Generate skills/explain-pr/SKILL.md, commands/explain-pr.md, and the Codex prompt
-// integrations/codex/explain-pr.md from prompts/review.md.
+// Generate the Claude Code skills and commands and the Codex prompts from prompts/review.md, in
+// two depths: `explain-pr` (short) and `explain-pr-deep` (a full walkthrough of every change).
 //
-// Both must contain the full prompt:
+// Every generated file must contain the full prompt:
 // - When SKILL.md only pointed at the prompt file, Claude launched the skill but skipped reading
 //   the file and improvised a generic review.
 // - A skill and a command with the same name collide: invoking the skill can load the command
 //   instead, so a command that only says "use the skill" loads no prompt at all.
 // prompts/review.md stays the single source of truth; test/skill.test.ts fails if these are stale.
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 
 const root = new URL("..", import.meta.url);
 const prompt = readFileSync(new URL("prompts/review.md", root), "utf8");
 
-const description =
-  "Explain the current branch's PR for a human reviewer (intent, before/after flow, reading order, per-change why, risk hotspots), then give prioritized findings. Use when asked to explain, walk through, or review a PR or branch.";
 const allowedTools =
   "Read Grep Glob Bash(pr-reviewer context *) Bash(git diff *) Bash(git log *) Bash(git merge-base *) Bash(git rev-parse *) Bash(git show *) Bash(git status *) Bash(git branch *) Bash(git -C * log *) Bash(go env GOMODCACHE)";
 
-const body = `<!-- GENERATED from prompts/review.md by \`npm run build:skill\`. Do not edit by hand. -->
+const VARIANTS = [
+  {
+    name: "explain-pr",
+    depth: "short",
+    description:
+      "Explain the current branch's PR for a human reviewer (intent, before/after flow, reading order, per-change why, risk hotspots), then give prioritized findings. Use when asked to explain, walk through, or review a PR or branch.",
+  },
+  {
+    name: "explain-pr-deep",
+    depth: "deep",
+    description:
+      "Deep walkthrough of the current branch's PR for a human reviewer: every change explained in turn, with examples, edge cases, design choices, and what each test proves, then prioritized findings. Use when asked for a deep, detailed, or thorough explanation of a PR or branch.",
+  },
+];
 
-Review the current branch as a pull request. **Base branch:** \`$ARGUMENTS\` (if empty, use \`main\`).
+const body = (depth) => `<!-- GENERATED from prompts/review.md by \`npm run build:skill\`. Do not edit by hand. -->
+
+Review the current branch as a pull request. **Base branch:** \`$ARGUMENTS\` (if empty, use \`main\`). **Depth: ${depth}.**
 Follow every instruction below exactly. This is read-only: do not edit, stage, or commit anything.
 
 ${prompt}`;
 
-const outputs = {
-  "skills/explain-pr/SKILL.md": `---
-name: explain-pr
+for (const { name, depth, description } of VARIANTS) {
+  const outputs = {
+    [`skills/${name}/SKILL.md`]: `---
+name: ${name}
 description: ${description}
 argument-hint: "[base-branch]"
 allowed-tools: ${allowedTools}
 ---
 
-${body}`,
-  "commands/explain-pr.md": `---
+${body(depth)}`,
+    [`commands/${name}.md`]: `---
 description: ${description}
 argument-hint: "[base-branch]"
 allowed-tools: ${allowedTools}
 ---
 
-${body}`,
-  // Codex custom prompt (~/.codex/prompts/explain-pr.md). Codex has no allowed-tools; its sandbox
-  // and approval settings decide what the review may run.
-  "integrations/codex/explain-pr.md": `---
+${body(depth)}`,
+    // Codex custom prompt (~/.codex/prompts/<name>.md). Codex has no allowed-tools; its sandbox and
+    // approval settings decide what the review may run.
+    [`integrations/codex/${name}.md`]: `---
 description: ${description}
 argument-hint: "[base-branch]"
 ---
 
-${body}`,
-};
-
-for (const [path, content] of Object.entries(outputs)) {
-  writeFileSync(new URL(path, root), content);
-  console.log(`wrote ${path}`);
+${body(depth)}`,
+  };
+  for (const [path, content] of Object.entries(outputs)) {
+    mkdirSync(new URL(path.slice(0, path.lastIndexOf("/")), root), { recursive: true });
+    writeFileSync(new URL(path, root), content);
+    console.log(`wrote ${path}`);
+  }
 }

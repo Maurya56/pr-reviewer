@@ -12,6 +12,7 @@ Link the prompt into Codex's custom prompts folder, so `git pull` in pr-reviewer
 git clone https://github.com/theaiowlandswan/pr-reviewer.git ~/pr-reviewer
 mkdir -p ~/.codex/prompts
 ln -s ~/pr-reviewer/integrations/codex/explain-pr.md ~/.codex/prompts/explain-pr.md
+ln -s ~/pr-reviewer/integrations/codex/explain-pr-deep.md ~/.codex/prompts/explain-pr-deep.md
 ```
 
 For the faster, cheaper path (exact sizes, noise removed, call graph), also put the context CLI on
@@ -28,6 +29,7 @@ On the PR branch, in Codex:
 ```text
 /prompts:explain-pr            # against main
 /prompts:explain-pr develop    # against another base branch
+/prompts:explain-pr-deep main  # every change explained in turn
 ```
 
 Depending on your Codex version the command may be listed as `/explain-pr`.

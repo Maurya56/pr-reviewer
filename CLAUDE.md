@@ -28,8 +28,9 @@ skill, Codex, the GitHub Action) must use that prompt rather than keep its own c
 - `prompts/review.md`: the review prompt
 - **Generated** from it by `npm run build:skill` (a test fails if stale); each embeds the full prompt, because a
   pointer to the file got skipped and a same-named command shadowed the skill:
-  `skills/explain-pr/SKILL.md`, `commands/explain-pr.md` (for Claude Code versions that don't list skills in `/`),
-  `integrations/codex/explain-pr.md`
+  `skills/explain-pr{,-deep}/SKILL.md`, `commands/explain-pr{,-deep}.md` (for Claude Code versions that don't list
+  skills in `/`), `integrations/codex/explain-pr{,-deep}.md`. The `-deep` variants set **Depth: deep**; the prompt's
+  Depth section switches the limits and the output shape.
 - `.claude-plugin/`: plugin and marketplace manifests; the whole repo is the plugin, so `prompts/` ships with it
 - `action.yml` + `scripts/ci-review.sh`: the GitHub Action (the script holds the logic and runs locally too)
 - `src/`: the `pr-reviewer context` CLI. `diff.ts` git + diff parsing, `filter.ts` noise, `context.ts` sizes,

@@ -13,6 +13,10 @@ inputs:
     description: Base branch to review against. Defaults to the pull request's base branch.
     required: false
     default: ""
+  depth:
+    description: "short (a one-minute walkthrough, the default) or deep (every change explained in turn)."
+    required: false
+    default: short
   model:
     description: Claude model to use (passed to `claude --model`). Defaults to Claude Code's default.
     required: false
@@ -57,8 +61,9 @@ runs:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
         BASE: ${{ inputs.base || github.base_ref }}
         MODEL: ${{ inputs.model }}
+        DEPTH: ${{ inputs.depth }}
       run: |
-        "$GITHUB_ACTION_PATH/scripts/ci-review.sh" "$BASE" "$MODEL" > "$RUNNER_TEMP/pr-review.md"
+        "$GITHUB_ACTION_PATH/scripts/ci-review.sh" "$BASE" "$MODEL" "$DEPTH" > "$RUNNER_TEMP/pr-review.md"
         cat "$RUNNER_TEMP/pr-review.md" >> "$GITHUB_STEP_SUMMARY"
 
     - name: Post or update the PR comment

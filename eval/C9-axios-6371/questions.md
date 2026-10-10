@@ -1,6 +1,7 @@
 # C9: axios/axios #6371, "feat(adapter): add fetch adapter"
 
-Case 9: a big new feature in an existing codebase. Merged 2024-04-28. 21 files, +1015/−127.
+Case 9: a big new feature in an existing codebase. Also known-buggy: fixed later by
+[#6518](https://github.com/axios/axios/pull/6518). Merged 2024-04-28. 21 files, +1015/−127.
 
 Score each question 0-2: **2** correct and specific, **1** partly right or vague, **0** missing or wrong.
 
@@ -61,3 +62,20 @@ server helper (`test/helpers/server.js`), plus CI and rollup config changes to r
 
 - 2: the dedicated fetch test suite and the test server.
 - 1: "tests added" without specifics.
+
+## Known bug
+
+`trackStream(stream, chunkSize, onProgress, onFinish)` in `lib/helpers/trackStream.js` calls
+`onFinish()` without checking it exists, both when the stream ends (`pull`) and when it's
+cancelled (`cancel`), while `onProgress` is guarded. The upload path in `lib/adapters/fetch.js`
+passes no fourth argument (`onFinish` is `undefined`), and the download path passes
+`isStreamResponse && onFinish`, which is `false` for an ordinary (non-stream) response. So a
+tracked upload, or a download with `onDownloadProgress` but no stream response type, calls
+`undefined()` or `false()` and throws a `TypeError` at the end of the stream or on cancel.
+
+Found by a pr-reviewer deep review on 2026-10-10; it isn't in the PR or its description. Fixed
+two months later in #6518 (e3c76fc, "fix(adapter): fix progress event emitting"), which wraps
+the call: `onFinish && onFinish(e)`.
+
+**Counts as surfaced (y)** if the review says `trackStream` calls `onFinish` unguarded, or that
+a caller passes no (or a falsy) `onFinish`, so the call can throw.

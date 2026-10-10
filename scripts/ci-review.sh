@@ -2,20 +2,22 @@
 # Run the pr-reviewer review non-interactively and print a PR comment body to stdout.
 # Used by action.yml; runs locally too, inside the repo to review with the PR head checked out.
 #
-# Usage: ci-review.sh <base-branch> [model]
+# Usage: ci-review.sh <base-branch> [model] [short|deep]
 # Needs: claude (Claude Code CLI) and jq on PATH; pr-reviewer on PATH makes it faster and cheaper.
 
 set -euo pipefail
 
-base="${1:?usage: ci-review.sh <base-branch> [model]}"
+base="${1:?usage: ci-review.sh <base-branch> [model] [short|deep]}"
 model="${2:-}"
+depth="${3:-short}"
+case "$depth" in short|deep) ;; *) echo "ci-review.sh: depth must be short or deep" >&2; exit 2 ;; esac
 root="$(cd "$(dirname "$0")/.." && pwd)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
 # Same instructions as the Claude Code skill: the header from build-skill.mjs, then the prompt.
 {
-  printf 'Review the current branch as a pull request. **Base branch:** `%s`.\n' "$base"
+  printf 'Review the current branch as a pull request. **Base branch:** `%s`. **Depth: %s.**\n' "$base" "$depth"
   printf 'Follow every instruction below exactly. This is read-only: do not edit, stage, or commit anything.\n\n'
   cat "$root/prompts/review.md"
 } > "$work/prompt.md"

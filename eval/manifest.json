@@ -270,7 +270,7 @@
     },
     {
       "id": "C9-axios-6371",
-      "kind": "case",
+      "kind": "buggy",
       "cases": [
         9
       ],
@@ -285,7 +285,12 @@
       "head_sha": "a3ff99b59d8ec2ab5dd049e68c043617a4072e42",
       "files": 21,
       "additions": 1015,
-      "deletions": 127
+      "deletions": 127,
+      "fix": {
+        "pr": 6518,
+        "sha": "e3c76fc9bdd03aa4d98afaf211df943e2031453f",
+        "url": "https://github.com/axios/axios/pull/6518"
+      }
     },
     {
       "id": "C10-zod-6085",

@@ -2,7 +2,7 @@
 # Compare a plain Claude review with /explain-pr on the current branch, side by side.
 #
 # Usage (run inside the repo you want reviewed, on the PR branch):
-#   compare.sh [--runs N] [base-branch] [out-dir]
+#   compare.sh [--runs N] [--deep] [base-branch] [out-dir]
 #
 # Both variants use the same model and the same read-only tools, and run in parallel. The plain
 # run has the Skill tool blocked, so it can't quietly load explain-pr. With --runs N (default 1)
@@ -13,10 +13,12 @@
 set -euo pipefail
 
 runs=1
+skill=explain-pr
 positional=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --runs) runs="$2"; shift 2 ;;
+    --deep) skill=explain-pr-deep; shift ;;
     *) positional+=("$1"); shift ;;
   esac
 done
@@ -51,7 +53,7 @@ for i in $(seq 1 "$runs"); do
     > "$dir/plain.json" 2> "$dir/plain.err" &
   plain_pid=$!
 
-  claude -p "Use the explain-pr skill to review the current branch as a pull request against $base." \
+  claude -p "Use the $skill skill to review the current branch as a pull request against $base." \
     --output-format json --allowedTools "${read_only[@]}" Skill "Bash(pr-reviewer context:*)" \
     > "$dir/explain-pr.json" 2> "$dir/explain-pr.err" &
   explain_pid=$!
@@ -62,10 +64,10 @@ done
 
 commit="$(git -C "$root" rev-parse --short HEAD)$(git -C "$root" diff --quiet || echo "-dirty")"
 
-python3 -I - "$out" "$base" "$(git branch --show-current)" "$runs" "$commit" <<'EOF'
+python3 -I - "$out" "$base" "$(git branch --show-current)" "$runs" "$commit" "$skill" <<'EOF'
 import json, re, statistics, sys, pathlib
 
-out, base, branch, runs, commit = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3], int(sys.argv[4]), sys.argv[5]
+out, base, branch, runs, commit, skill = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3], int(sys.argv[4]), sys.argv[5], sys.argv[6]
 VARIANTS = ["plain", "explain-pr"]
 SLOP = re.compile(r"\b(excellent|elegant|clean|solid|well-crafted|comprehensive|clever|robust|great|outstanding|exemplary)\b|✅|⚠️|🔍", re.I)
 
@@ -112,7 +114,7 @@ for i in range(1, runs + 1):
         rows.append(metrics(i, v, data))
 
 (out / "results.json").write_text(json.dumps(
-    {"branch": branch, "base": base, "runs": runs, "pr_reviewer_commit": commit, "results": rows}, indent=2) + "\n")
+    {"branch": branch, "base": base, "runs": runs, "pr_reviewer_commit": commit, "skill": skill, "results": rows}, indent=2) + "\n")
 
 def fmt(values, money=False):
     vals = [v for v in values if v is not None]
@@ -123,7 +125,7 @@ def fmt(values, money=False):
     return f(mean) if len(vals) == 1 else f"{f(mean)} ({f(min(vals))}-{f(max(vals))})"
 
 lines = [f"# Review comparison: `{branch}` vs `{base}`", "",
-         f"{runs} run(s) per variant, pr-reviewer at `{commit}`. Means, with min-max across runs.", "",
+         f"{runs} run(s) per variant, pr-reviewer at `{commit}` (`{skill}`). Means, with min-max across runs.", "",
          "| Variant | OK runs | Input tokens | Output tokens | Cost | Turns | Time (s) | Words | Slop words |",
          "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
 for v in VARIANTS:

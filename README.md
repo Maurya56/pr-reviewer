@@ -63,10 +63,18 @@ Then check out the PR branch in any repo and run:
 ```text
 /explain-pr            # diff against main
 /explain-pr develop    # diff against another base branch
+/explain-pr-deep main  # every change explained in turn, however big the PR
 ```
 
-It may be listed as `/pr-reviewer:explain-pr`, which also works. You can also just ask "explain
-this PR against main".
+`/explain-pr` is the one-minute version: the idea, one example, where to look.
+`/explain-pr-deep` is the same voice with more time: one section per change, each with a
+concrete before-and-after example, how the code works, what else it touches, edge cases, and
+the design trade-off, then what every test proves. Length grows with the PR; see
+[examples/axios-pr-6371-deep](examples/axios-pr-6371-deep/), where a deep review found a bug the
+PR shipped with and axios fixed two months later.
+
+They may be listed as `/pr-reviewer:explain-pr` and `/pr-reviewer:explain-pr-deep`, which also
+work. You can also just ask "explain this PR against main" (or "explain it in depth").
 
 **Make it faster and cheaper:** install the context CLI so the review gets everything in one
 call instead of a dozen (Node 14.18 or newer):
@@ -86,8 +94,10 @@ you'll get two copies of the command:
 ```bash
 git clone https://github.com/theaiowlandswan/pr-reviewer.git
 mkdir -p ~/.claude/skills ~/.claude/commands
-ln -s "$PWD/pr-reviewer/skills/explain-pr" ~/.claude/skills/explain-pr
-ln -s "$PWD/pr-reviewer/commands/explain-pr.md" ~/.claude/commands/explain-pr.md
+for name in explain-pr explain-pr-deep; do
+  ln -s "$PWD/pr-reviewer/skills/$name" ~/.claude/skills/$name
+  ln -s "$PWD/pr-reviewer/commands/$name.md" ~/.claude/commands/$name.md
+done
 ```
 
 The prompt itself is plain markdown in [`prompts/review.md`](prompts/review.md), so you can also
@@ -121,6 +131,7 @@ jobs:
       - uses: theaiowlandswan/pr-reviewer@main
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # depth: deep                # optional: every change explained in turn
           # model: claude-sonnet-5-5   # optional
 ```
 
@@ -166,14 +177,14 @@ cd your-repo && git switch your-pr-branch
 ```
 
 Add `--runs 3` to run each review three times: model output varies between runs, and the summary
-shows the spread.
+shows the spread. Add `--deep` to compare against `/explain-pr-deep` instead.
 
 ## Evaluation
 
 [`eval/`](eval/README.md) measures pr-reviewer against a plain review on 17 real public PRs that
 together cover 12 kinds of review: a small fix, a shared-API change, a refactor, a bug fix,
 deleted code, concurrency, a build migration, a tangled PR, a big feature, a lot of new code, an
-AI agent's PR checked against the issue it was given, and an unfamiliar C++ codebase. Three are
+AI agent's PR checked against the issue it was given, and an unfamiliar C++ codebase. Four are
 known-buggy: merged, then fixed by a later PR. 12 of the 17 were merged after the model's
 training cutoff, so it can't already know them.
 
