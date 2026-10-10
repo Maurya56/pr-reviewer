@@ -6,7 +6,7 @@
   "author": "Maurya",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Maurya56/pr-reviewer.git"
+    "url": "git+https://github.com/theaiowlandswan/pr-reviewer.git"
   },
   "type": "module",
   "bin": {

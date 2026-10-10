@@ -36,7 +36,7 @@ sections:
 Install it as a plugin, inside Claude Code:
 
 ```text
-/plugin marketplace add Maurya56/pr-reviewer
+/plugin marketplace add theaiowlandswan/pr-reviewer
 /plugin install pr-reviewer@pr-reviewer
 ```
 
@@ -55,7 +55,7 @@ right away (run `npm run build:skill` after editing `prompts/review.md`). Don't 
 you'll get two copies of the command:
 
 ```bash
-git clone https://github.com/Maurya56/pr-reviewer.git
+git clone https://github.com/theaiowlandswan/pr-reviewer.git
 mkdir -p ~/.claude/skills ~/.claude/commands
 ln -s "$PWD/pr-reviewer/skills/explain-pr" ~/.claude/skills/explain-pr
 ln -s "$PWD/pr-reviewer/commands/explain-pr.md" ~/.claude/commands/explain-pr.md
