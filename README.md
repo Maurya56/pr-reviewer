@@ -13,16 +13,23 @@ pre-processing the diff deterministically before the model sees it.
 
 ## What you get
 
-Every review has six sections, in this order:
+Every review opens with a one-line **TL;DR and verdict** (Ready / Ready after fixes / Needs
+discussion) and the PR's real size ("1,076 lines, of which 380 are logic in 4 files"), then six
+sections:
 
 1. **Intent:** 2-3 sentences on what the PR is trying to do.
-2. **Flow: before → after:** a Mermaid diagram and a short narrative of how control/data flow changed.
-3. **Reading order:** files ranked by importance, with why to read each. Lockfiles, renames,
-   formatting, and generated code are listed as skippable.
-4. **Per-change "why":** each meaningful change tied back to the intent. Changes that *don't* tie back are flagged.
+2. **Flow: before → after:** a text diagram that renders anywhere (terminal, editor, GitHub),
+   a table of behaviour changes (input, before, after), and the blast radius: who calls the
+   changed code, and which callers the PR didn't update.
+3. **Reading order:** files ranked by importance, with why to read each, and the 5-12 lines that
+   are the heart of the change. Lockfiles, renames, formatting, and generated code are listed
+   as skippable.
+4. **Per-change "why":** each meaningful change tied back to the intent. Changes that *don't*
+   tie back are flagged. A test map shows which changed functions have tests.
 5. **Risk hotspots:** the few places that need real thought, each with a concrete question
    (e.g. *"What happens if the connection drops mid-batch?"*).
-6. **Review findings:** short and prioritized: bugs > risks > style.
+6. **Review findings:** short and prioritized (bugs > risks > style), each written so you can
+   paste it as a PR comment.
 
 ## Quick start (Claude Code)
 
@@ -43,8 +50,9 @@ Then check out the PR branch in any repo and run:
 It may be listed as `/pr-reviewer:explain-pr`, which also works. You can also just ask "explain
 this PR against main".
 
-**Hacking on the prompt?** Link it instead of installing the plugin, so edits to
-`prompts/review.md` take effect immediately. Don't do both, or you'll get two copies of the command:
+**Hacking on the prompt?** Link it instead of installing the plugin, so your edits take effect
+right away (run `npm run build:skill` after editing `prompts/review.md`). Don't do both, or
+you'll get two copies of the command:
 
 ```bash
 git clone https://github.com/Maurya56/pr-reviewer.git
@@ -55,6 +63,18 @@ ln -s "$PWD/pr-reviewer/commands/explain-pr.md" ~/.claude/commands/explain-pr.md
 
 The prompt itself is plain markdown in [`prompts/review.md`](prompts/review.md), so you can also
 paste it into any agent.
+
+## See the difference yourself
+
+`scripts/compare.sh` runs a plain Claude review and `/explain-pr` on the same branch, in
+parallel, with the same model and the same read-only tools, and writes both outputs side by
+side with tokens, cost, and a short scoring sheet:
+
+```bash
+cd your-repo && git switch your-pr-branch
+~/.claude/plugins/marketplaces/pr-reviewer/scripts/compare.sh main   # plugin install
+# or: ~/pr-reviewer/scripts/compare.sh main                           # cloned repo
+```
 
 ## Reviewing across repositories
 

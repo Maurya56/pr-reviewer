@@ -7,12 +7,15 @@ a plain review by pre-processing the diff deterministically before the LLM sees 
 
 ## The output format (the core product)
 
+Header: TL;DR + verdict, and the PR's real size (logic vs tests/noise/docs).
+
 1. **Intent:** 2-3 sentences on what the PR is trying to do.
-2. **Flow before → after:** a Mermaid diagram plus a short before/after narrative.
-3. **Reading order:** files ranked by importance with a reason each; skippable files listed explicitly.
-4. **Per-change "why":** each meaningful change tied back to the intent; flag changes that don't tie back.
+2. **Flow before → after:** a plain-text diagram (renders everywhere; no Mermaid in terminal output),
+   behaviour-change table, blast radius (callers updated / not updated).
+3. **Reading order:** files ranked by importance with a reason each, a "Start here" diff snippet; skippable files listed.
+4. **Per-change "why":** each meaningful change tied back to the intent; flag changes that don't tie back; test map.
 5. **Risk hotspots:** the few places a human must think, each with a concrete question to ask.
-6. **Review findings:** short, last, prioritized (bugs > risks > style).
+6. **Review findings:** short, last, prioritized (bugs > risks > style), each paste-ready as a PR comment.
 
 `prompts/review.md` is the single source of truth for this format. Every integration (the Claude Code
 skill, Codex, the GitHub Action) must use that prompt rather than keep its own copy.
@@ -20,7 +23,8 @@ skill, Codex, the GitHub Action) must use that prompt rather than keep its own c
 ## Layout
 
 - `prompts/review.md`: the review prompt
-- `skills/explain-pr/SKILL.md`: the `/explain-pr [base-branch]` skill (a thin wrapper around the prompt)
+- `skills/explain-pr/SKILL.md`: the `/explain-pr [base-branch]` skill. **Generated** from `prompts/review.md` by
+  `npm run build:skill` (a test fails if stale). It must embed the full prompt: a pointer to the file got skipped.
 - `commands/explain-pr.md`: slash command that hands off to the skill, for Claude Code versions that don't list skills in `/`
 - `.claude-plugin/`: plugin and marketplace manifests; the whole repo is the plugin, so `prompts/` ships with it
 - `src/`: Phase 1 CLI (`diff.ts` parse git diff, `filter.ts` drop noise, `context.ts` cluster and render, `cli.ts` entry point)
@@ -52,3 +56,6 @@ the `knowledge` field. The prompt documents it in Step 2b; any CLI code that rea
 - Don't commit unless asked.
 
 ## Known pitfalls
+
+- After editing `prompts/review.md`, run `npm run build:skill`, or the skill keeps serving the old prompt.
+- Never run `scripts/compare.sh` inside this repo: the plain review reads CLAUDE.md and copies the format.
