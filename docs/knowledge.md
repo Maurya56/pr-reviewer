@@ -77,10 +77,8 @@ Rules:
 
 ### Where generated output goes
 
-The Phase 1 CLI currently writes `.pr-reviewer/context.md`, and this repo's `.gitignore` ignores
-all of `.pr-reviewer/`. Users who copy that rule would silently ignore their committed knowledge
-file. When Phase 1 lands, generated output moves to `.pr-reviewer/out/`, and only that folder is
-gitignored.
+The CLI writes generated output to `.pr-reviewer/out/`, and only that folder is gitignored, so a
+committed `.pr-reviewer/knowledge.md` is never ignored by accident.
 
 ## Lifecycle
 

@@ -1,0 +1,83 @@
+name: pr-reviewer
+description: Explain a pull request for a human reviewer, then give short, verified findings. Posts one PR comment and updates it on every push.
+author: theaiowlandswan
+branding:
+  icon: eye
+  color: blue
+
+inputs:
+  anthropic_api_key:
+    description: Anthropic API key used by Claude Code.
+    required: true
+  base:
+    description: Base branch to review against. Defaults to the pull request's base branch.
+    required: false
+    default: ""
+  model:
+    description: Claude model to use (passed to `claude --model`). Defaults to Claude Code's default.
+    required: false
+    default: ""
+  github_token:
+    description: "Token used to post the comment. Needs `pull-requests: write`."
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Install pr-reviewer and Claude Code
+      shell: bash
+      run: |
+        cd "$GITHUB_ACTION_PATH"
+        npm ci --no-audit --no-fund
+        mkdir -p "$RUNNER_TEMP/pr-reviewer-bin"
+        printf '#!/bin/sh\nexec node "%s/dist/cli.js" "$@"\n' "$GITHUB_ACTION_PATH" > "$RUNNER_TEMP/pr-reviewer-bin/pr-reviewer"
+        chmod +x "$RUNNER_TEMP/pr-reviewer-bin/pr-reviewer"
+        echo "$RUNNER_TEMP/pr-reviewer-bin" >> "$GITHUB_PATH"
+        npm install -g @anthropic-ai/claude-code --no-audit --no-fund
+
+    - name: Fetch the base branch
+      shell: bash
+      env:
+        BASE: ${{ inputs.base || github.base_ref }}
+      run: |
+        if [ -z "$BASE" ]; then
+          echo "::error::No base branch: run on pull_request events, or set the 'base' input."
+          exit 1
+        fi
+        git fetch --no-tags origin "$BASE:refs/remotes/origin/$BASE"
+
+    - name: Review
+      shell: bash
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        BASE: ${{ inputs.base || github.base_ref }}
+        MODEL: ${{ inputs.model }}
+      run: |
+        "$GITHUB_ACTION_PATH/scripts/ci-review.sh" "$BASE" "$MODEL" > "$RUNNER_TEMP/pr-review.md"
+        cat "$RUNNER_TEMP/pr-review.md" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Post or update the PR comment
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+        REPO: ${{ github.repository }}
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        if [ -z "$PR" ]; then
+          echo "Not a pull_request event: review is in the job summary only."
+          exit 0
+        fi
+        id="$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+          --jq '.[] | select(.body | startswith("<!-- pr-reviewer -->")) | .id' | tail -n 1)"
+        if [ -n "$id" ]; then
+          gh api -X PATCH "repos/$REPO/issues/comments/$id" -F "body=@$RUNNER_TEMP/pr-review.md" > /dev/null
+          echo "Updated comment $id"
+        else
+          gh api -X POST "repos/$REPO/issues/$PR/comments" -F "body=@$RUNNER_TEMP/pr-review.md" > /dev/null
+          echo "Posted a new comment"
+        fi

@@ -36,7 +36,7 @@ claude -p "Review the changes on the current branch as a pull request against $b
 plain_pid=$!
 
 claude -p "Use the explain-pr skill to review the current branch as a pull request against $base." \
-  --output-format json --allowedTools "${read_only[@]}" Skill \
+  --output-format json --allowedTools "${read_only[@]}" Skill "Bash(pr-reviewer context:*)" \
   > "$out/explain-pr.json" 2> "$out/explain-pr.err" &
 explain_pid=$!
 

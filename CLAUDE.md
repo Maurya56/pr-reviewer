@@ -23,25 +23,27 @@ skill, Codex, the GitHub Action) must use that prompt rather than keep its own c
 ## Layout
 
 - `prompts/review.md`: the review prompt
-- `skills/explain-pr/SKILL.md`: the `/explain-pr [base-branch]` skill. **Generated** from `prompts/review.md` by
-  `npm run build:skill` (a test fails if stale). It must embed the full prompt: a pointer to the file got skipped.
-- `commands/explain-pr.md`: slash command that hands off to the skill, for Claude Code versions that don't list skills in `/`
+- **Generated** from it by `npm run build:skill` (a test fails if stale); each embeds the full prompt, because a
+  pointer to the file got skipped and a same-named command shadowed the skill:
+  `skills/explain-pr/SKILL.md`, `commands/explain-pr.md` (for Claude Code versions that don't list skills in `/`),
+  `integrations/codex/explain-pr.md`
 - `.claude-plugin/`: plugin and marketplace manifests; the whole repo is the plugin, so `prompts/` ships with it
-- `src/`: Phase 1 CLI (`diff.ts` parse git diff, `filter.ts` drop noise, `context.ts` cluster and render, `cli.ts` entry point)
+- `action.yml` + `scripts/ci-review.sh`: the GitHub Action (the script holds the logic and runs locally too)
+- `src/`: the `pr-reviewer context` CLI. `diff.ts` git + diff parsing, `filter.ts` noise, `context.ts` sizes,
+  reading order, rendering, `symbols.ts` tree-sitter parsing (pure), `callgraph.ts` changed functions and callers
+  (git I/O), `cli.ts` entry point
+- `grammars/`: tree-sitter wasm files copied from the `tree-sitter-wasms` dev dependency at build (gitignored).
+  `web-tree-sitter` is pinned to 0.22.6 to match those grammars; upgrade both together or loading breaks.
+- `scripts/compare.sh`: plain review vs pr-reviewer, side by side
 - `test/`: vitest tests
-- `integrations/`: per-agent setup (Codex, later the GitHub Action)
 - `examples/`: real review outputs, before/after
 
 ## Roadmap
 
-- **Phase 0 (current):** the prompt plus the Claude Code slash command.
-- **Phase 1:** `npx pr-reviewer context`. Get the diff, filter noise hunks, cluster related hunks,
-  emit a compact context file. Measure token savings against the raw diff.
+- **Done:** Phase 0 (prompt + skill), Phase 1 (context CLI), Phase 2 (call graph: Python, TS/JS, Go, C/C++),
+  Phase 3 (plugin, GitHub Action, Codex prompt), cross-repo context in the prompt.
 - **Phase 1.5:** repo knowledge (design in `docs/knowledge.md`).
-- **Phase 2:** tree-sitter call-graph context (changed functions plus 1-hop callers/callees), TS and Python
-  first, then Go and C/C++. Resolve cross-repo symbols the same way the prompt does (Step 2b), using
-  `.pr-reviewer.json`.
-- **Phase 3:** Claude Code plugin (done), Codex prompt/AGENTS.md recipe, GitHub Action that posts a PR comment.
+- **Next:** call graph across repos in `.pr-reviewer.json`; benchmark of 3-5 fixture PRs with several runs each.
 
 `.pr-reviewer.json` (in the reviewed repo) is the one config format, for cross-repo context and (Phase 1.5)
 the `knowledge` field. The prompt documents it in Step 2b; any CLI code that reads it must follow that schema.

@@ -2,7 +2,7 @@
 name: explain-pr
 description: Explain the current branch's PR for a human reviewer (intent, before/after flow, reading order, per-change why, risk hotspots), then give prioritized findings. Use when asked to explain, walk through, or review a PR or branch.
 argument-hint: "[base-branch]"
-allowed-tools: Read Grep Glob Bash(git diff *) Bash(git log *) Bash(git merge-base *) Bash(git rev-parse *) Bash(git show *) Bash(git status *) Bash(git branch *) Bash(git -C * log *) Bash(go env GOMODCACHE)
+allowed-tools: Read Grep Glob Bash(pr-reviewer context *) Bash(git diff *) Bash(git log *) Bash(git merge-base *) Bash(git rev-parse *) Bash(git show *) Bash(git status *) Bash(git branch *) Bash(git -C * log *) Bash(go env GOMODCACHE)
 ---
 
 <!-- GENERATED from prompts/review.md by `npm run build:skill`. Do not edit by hand. -->
@@ -17,8 +17,9 @@ correct mental model of the change quickly, then point them at the few places th
 thought. Do not produce a flat list of nitpicks.
 
 **Tool budget: at most 12 tool calls in total.** Every extra call re-sends the whole
-conversation, so batch: one call for `--numstat`, one for the log, one `git diff` for all
-signal files together, then the Step 2a Greps in parallel in a single turn. Read extra context
+conversation, so batch: start with `pr-reviewer context` (Step 1), which replaces the git calls;
+without it, one call for `--numstat`, one for the log, one `git diff` for all signal files
+together. Then the Step 2a Greps in parallel in a single turn. Read extra context
 only when a hunk is unclear without it.
 
 ## Inputs
@@ -27,6 +28,12 @@ only when a hunk is unclear without it.
 - The current checked-out branch is the PR head.
 
 ## Step 1: Gather the diff cheaply
+
+**Your first tool call is always `pr-reviewer context --stdout --base <base>`.** Do not run any
+git command before it. If it works, it already did everything in this step: the compared refs, exact size numbers, commits, skipped noise, and
+every signal diff in reading order (large test diffs are collapsed to their test names; read the
+test file only if you need its details). Use its numbers as-is, skip the numbered steps below,
+and go to Step 2. If the command is not found, follow the numbered steps.
 
 1. Find the merge base: `git merge-base origin/<base> HEAD`. If `origin/<base>` does not
    exist, use the local `<base>`. If neither exists, stop and say so.
@@ -61,7 +68,12 @@ only when a hunk is unclear without it.
 
 ## Step 2a: Blast radius and tests
 
-For each function, method, type, or exported name whose signature or behaviour this PR
+**If the context has a "Changed functions" section, use it and do not Grep for callers.** It
+was built by parsing the code: each changed function's callers (with "file not changed in this
+PR" marking callers the PR did not update) and what it calls. A **removed** function that is
+**still called** is a finding: the caller is the trigger. Only Grep for tests below.
+
+Otherwise, for each function, method, type, or exported name whose signature or behaviour this PR
 changes (at most 5, most important first; issue all the Greps in one turn):
 
 - **Callers:** Grep the repo for its uses outside tests, excluding its definition and comments.
@@ -154,7 +166,7 @@ jump. If a section genuinely has nothing to say, write "None." Do not pad.
 
 ~~~markdown
 **TL;DR:** <one sentence: what this PR does> **Verdict:** Ready | Ready after fixes | Needs discussion
-**Size:** <F> files, +<A>/−<D>. Real logic: <N> lines in <M> files. The rest: tests <N>, noise <N>, docs/config <N>.
+**Size:** <copy the context's Size line verbatim. Without a context: F files, +A/−D. Logic: +a/−d in M files. Tests: … Config: … Docs: … Noise (skipped): …>
 
 ## 1. Intent
 <2-3 sentences: what problem this PR solves and how, in plain language.>
@@ -240,6 +252,22 @@ that knowledge names:
 ```
 
 Suggest only. Never edit the knowledge file.
+
+## Voice: written by a person, for a person
+
+The reader is a busy engineer who distrusts AI reviews. Every sentence must earn its place.
+
+- **If a sentence would be true of any PR, delete it.** "This improves maintainability" and
+  "the tests are comprehensive" say nothing. Say what changed, where, and what it means.
+- **No praise or grading.** Never "excellent", "elegant", "clean", "solid", "well-crafted",
+  "comprehensive", "clever", "robust", "great". Describe what the code does; the reader judges.
+- **No emoji or status icons** (✅ ⚠️ 🔍 🚀). Plain words.
+- **No hedged filler.** "Consider", "you might want to", "it may be worth" only with a concrete
+  reason in the same sentence.
+- **Names and numbers over adjectives.** "3 of 7 callers not updated" beats "some callers may
+  be affected". "Retries 5 times with no backoff" beats "retry logic could be improved".
+- **No closing summary or "Overall assessment".** The TL;DR is the summary.
+- **Short sentences.** One idea each. Plain words over jargon the diff doesn't use.
 
 ## Rules
 

@@ -21,7 +21,7 @@ pnpm-debug.log*
 !.env.example
 
 # Generated review context (Phase 1 output)
-.pr-reviewer/
+.pr-reviewer/out/
 
 # Editors / OS
 .DS_Store
@@ -31,3 +31,6 @@ pnpm-debug.log*
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Tree-sitter grammars copied at build time
+grammars/

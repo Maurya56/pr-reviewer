@@ -6,10 +6,29 @@ AI agents now write PRs faster than people can read them. A 2,000-line diff gets
 approved, and the usual AI review adds to the problem: a flat list of nitpicks, with no help
 understanding what the change actually does.
 
-pr-reviewer is an add-on for AI coding agents (Claude Code now; Codex and a GitHub Action next)
-that **explains the change first**, so you can build a correct mental model in minutes, and only
-then gives review findings. It also aims to use **fewer tokens** than a plain review by
-pre-processing the diff deterministically before the model sees it.
+pr-reviewer works in Claude Code, Codex, and as a GitHub Action. It **explains the change
+first**, so you can build a correct mental model in minutes, and only then gives review
+findings. A small CLI pre-processes the diff before the model sees it: noise removed, exact
+sizes, and a call graph of the changed functions. That makes the review both more accurate and
+cheaper than a plain one.
+
+**The rule for every line of output: human-understandable, not AI slop.** No praise padding, no
+emoji checklists, no sentence that would be true of any PR.
+
+## Measured, not claimed
+
+On a real merged PR (pallets/click #3818, a Ctrl-C race fix), same model, same read-only tools,
+run with [`scripts/compare.sh`](scripts/compare.sh):
+
+| | Plain Claude review | pr-reviewer |
+| --- | --- | --- |
+| Input tokens | 145k | **61k** |
+| Cost | $0.19 | **$0.14** |
+| Tool turns | 9 | **5** |
+| Praise and filler words ("excellent", "comprehensive", ✅ ...) | 34 | **1** |
+| Callers of the changed function, with file and line | not covered | **both found** |
+
+One PR, one run each, so read it as direction, not an average. Run it on your own PRs (below).
 
 ## What you get
 
@@ -50,6 +69,16 @@ Then check out the PR branch in any repo and run:
 It may be listed as `/pr-reviewer:explain-pr`, which also works. You can also just ask "explain
 this PR against main".
 
+**Make it faster and cheaper:** install the context CLI so the review gets everything in one
+call instead of a dozen (Node 20+):
+
+```bash
+npm install -g github:theaiowlandswan/pr-reviewer    # provides `pr-reviewer`
+```
+
+The review uses it automatically when it's on your PATH, and falls back to plain git commands
+when it isn't.
+
 **Hacking on the prompt?** Link it instead of installing the plugin, so your edits take effect
 right away (run `npm run build:skill` after editing `prompts/review.md`). Don't do both, or
 you'll get two copies of the command:
@@ -63,6 +92,66 @@ ln -s "$PWD/pr-reviewer/commands/explain-pr.md" ~/.claude/commands/explain-pr.md
 
 The prompt itself is plain markdown in [`prompts/review.md`](prompts/review.md), so you can also
 paste it into any agent.
+
+## GitHub Action
+
+Review every pull request automatically. The review is posted as one comment, updated on each
+push, and also written to the job summary:
+
+```yaml
+# .github/workflows/pr-review.yml
+name: PR review
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: theaiowlandswan/pr-reviewer@main
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # model: claude-sonnet-5-5   # optional
+```
+
+Add `ANTHROPIC_API_KEY` under the repo's **Settings → Secrets and variables → Actions**.
+Pull requests from forks don't get secrets on `pull_request`, so they're skipped. Don't switch to
+`pull_request_target` to work around that: the review reads the PR's code, and that event would
+give untrusted code a write token.
+
+## Codex
+
+The same prompt, as a Codex custom prompt: see [integrations/codex](integrations/codex/README.md).
+
+## The context CLI
+
+```bash
+pr-reviewer context --base main            # writes .pr-reviewer/out/context.md
+pr-reviewer context --base main --stdout   # prints it
+```
+
+What it does, without any model call:
+
+- **Drops noise** before the model sees it: lockfiles, generated code (including files whose
+  header says "DO NOT EDIT"), snapshots, pure renames, formatting-only changes.
+- **Exact size**, split into logic, tests, config, docs, and noise, so the review never
+  estimates.
+- **Reading order:** source first, then tests, config, docs. Large test diffs collapse to their
+  test names.
+- **Call graph (tree-sitter):** for each changed function in Python, TypeScript/JavaScript, Go,
+  C, or C++: whether it was added, modified, or removed, who calls it (flagging callers the PR
+  didn't update), and what it calls. A removed function that something still calls shows up
+  here, before anyone merges it.
 
 ## See the difference yourself
 
@@ -107,20 +196,24 @@ checkouts to `permissions.additionalDirectories` in your settings, or run `/add-
 
 ## Roadmap
 
-- [x] **Phase 0:** review prompt + Claude Code `/explain-pr` command
-- [ ] **Phase 1:** `npx pr-reviewer context`: filter noise, cluster related hunks, emit a compact context file; measure token savings vs the raw diff
+- [x] **Phase 0:** review prompt + Claude Code `/explain-pr`
+- [x] **Phase 1:** `pr-reviewer context`: noise filter, exact sizes, reading order, collapsed test diffs
 - [x] **Cross-repo context** (prompt level): read code the PR calls into from other repos, find code in other repos that uses what it changes
-- [ ] **Phase 2:** tree-sitter call-graph context (changed functions + 1-hop callers/callees, including across repos in `.pr-reviewer.json`), TypeScript and Python first, then Go and C/C++
-- [ ] **Phase 3:** ~~Claude Code plugin~~ (done), [Codex](integrations/codex/README.md) recipe, GitHub Action that posts a PR comment
+- [x] **Phase 2:** tree-sitter call graph for Python, TS/JS, Go, C/C++ (changed functions, 1-hop callers and callees)
+- [x] **Phase 3:** Claude Code plugin, GitHub Action, Codex prompt
+- [ ] **Phase 1.5:** repo knowledge ([design](docs/knowledge.md))
+- [ ] Call graph across repos listed in `.pr-reviewer.json`
+- [ ] Benchmark: 3-5 fixture PRs, several runs each, tokens and quality scores
 
 ## Development
 
 Requires Node 20+.
 
 ```bash
-npm install
+npm install          # also builds dist/ and copies the tree-sitter grammars
 npm test
 npm run typecheck
+npm run build:skill  # after editing prompts/review.md: regenerates the skill, command, and Codex prompt
 ```
 
 ## License

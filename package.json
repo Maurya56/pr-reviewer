@@ -14,21 +14,27 @@
   },
   "files": [
     "dist",
+    "grammars",
     "prompts"
   ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-grammars.mjs",
     "build:skill": "node scripts/build-skill.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepare": "npm run build"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
+    "tree-sitter-wasms": "0.1.13",
     "typescript": "^5.9.3",
     "vitest": "^3.2.7"
+  },
+  "dependencies": {
+    "web-tree-sitter": "0.22.6"
   }
 }

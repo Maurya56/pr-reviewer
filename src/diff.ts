@@ -1,5 +1,10 @@
 // Phase 1: read the PR diff from git and parse it into files and hunks.
 
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+
 export type ChangeStatus = "added" | "modified" | "deleted" | "renamed";
 
 export interface Hunk {
@@ -31,20 +36,53 @@ export interface DiffOptions {
   cwd?: string;
 }
 
-/**
- * Resolve the merge base between `base` and HEAD.
- * TODO(phase-1): run `git merge-base`, falling back to `origin/<base>`.
- */
-export async function resolveMergeBase(_options: DiffOptions = {}): Promise<string> {
-  throw new Error("resolveMergeBase: not implemented (Phase 1)");
+export async function git(args: string[], cwd?: string): Promise<string> {
+  const { stdout } = await execFileAsync("git", args, { cwd, maxBuffer: 256 * 1024 * 1024 });
+  return stdout;
+}
+
+async function isCommit(ref: string, cwd?: string): Promise<boolean> {
+  try {
+    await git(["rev-parse", "--verify", "--quiet", `${ref}^{commit}`], cwd);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
- * Get the raw unified diff for the PR (merge-base...HEAD).
- * TODO(phase-1): run `git diff -M --no-color <merge-base>...HEAD`.
+ * The ref to compare against: `origin/<base>` when it exists (a stale local branch would pull
+ * already-merged commits into the review), otherwise the local `<base>`.
  */
-export async function getRawDiff(_options: DiffOptions = {}): Promise<string> {
-  throw new Error("getRawDiff: not implemented (Phase 1)");
+export async function resolveBaseRef(options: DiffOptions = {}): Promise<string> {
+  const base = options.base ?? "main";
+  for (const ref of [`origin/${base}`, base]) {
+    if (await isCommit(ref, options.cwd)) return ref;
+  }
+  throw new Error(`Base branch not found: neither origin/${base} nor ${base} exists`);
+}
+
+/** Resolve the merge base between the base ref and HEAD. */
+export async function resolveMergeBase(options: DiffOptions = {}): Promise<string> {
+  const ref = await resolveBaseRef(options);
+  return (await git(["merge-base", ref, "HEAD"], options.cwd)).trim();
+}
+
+/**
+ * Get the raw unified diff from the merge base to HEAD. Prefixes are forced so a user's
+ * `diff.noprefix` or `diff.mnemonicPrefix` config can't break parseDiff.
+ */
+export async function getRawDiff(mergeBase: string, cwd?: string): Promise<string> {
+  return git(
+    ["diff", "-M", "--no-color", "--no-ext-diff", "--src-prefix=a/", "--dst-prefix=b/", `${mergeBase}..HEAD`],
+    cwd,
+  );
+}
+
+/** One line per commit in the PR: `<short sha> <author> <subject>`. */
+export async function getCommits(mergeBase: string, cwd?: string): Promise<string[]> {
+  const out = await git(["log", "--format=%h %an %s", `${mergeBase}..HEAD`], cwd);
+  return out.split("\n").filter(Boolean);
 }
 
 /**

@@ -1,4 +1,5 @@
-// Generate skills/explain-pr/SKILL.md and commands/explain-pr.md from prompts/review.md.
+// Generate skills/explain-pr/SKILL.md, commands/explain-pr.md, and the Codex prompt
+// integrations/codex/explain-pr.md from prompts/review.md.
 //
 // Both must contain the full prompt:
 // - When SKILL.md only pointed at the prompt file, Claude launched the skill but skipped reading
@@ -15,7 +16,7 @@ const prompt = readFileSync(new URL("prompts/review.md", root), "utf8");
 const description =
   "Explain the current branch's PR for a human reviewer (intent, before/after flow, reading order, per-change why, risk hotspots), then give prioritized findings. Use when asked to explain, walk through, or review a PR or branch.";
 const allowedTools =
-  "Read Grep Glob Bash(git diff *) Bash(git log *) Bash(git merge-base *) Bash(git rev-parse *) Bash(git show *) Bash(git status *) Bash(git branch *) Bash(git -C * log *) Bash(go env GOMODCACHE)";
+  "Read Grep Glob Bash(pr-reviewer context *) Bash(git diff *) Bash(git log *) Bash(git merge-base *) Bash(git rev-parse *) Bash(git show *) Bash(git status *) Bash(git branch *) Bash(git -C * log *) Bash(go env GOMODCACHE)";
 
 const body = `<!-- GENERATED from prompts/review.md by \`npm run build:skill\`. Do not edit by hand. -->
 
@@ -37,6 +38,14 @@ ${body}`,
 description: ${description}
 argument-hint: "[base-branch]"
 allowed-tools: ${allowedTools}
+---
+
+${body}`,
+  // Codex custom prompt (~/.codex/prompts/explain-pr.md). Codex has no allowed-tools; its sandbox
+  // and approval settings decide what the review may run.
+  "integrations/codex/explain-pr.md": `---
+description: ${description}
+argument-hint: "[base-branch]"
 ---
 
 ${body}`,
