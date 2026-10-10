@@ -7,15 +7,18 @@ a plain review by pre-processing the diff deterministically before the LLM sees 
 
 ## The output format (the core product)
 
-Header: TL;DR + verdict, and the PR's real size (logic vs tests/noise/docs).
+A review that reads like a senior engineer walking a teammate through the PR, not a filled-in report:
 
-1. **Intent:** 2-3 sentences on what the PR is trying to do.
-2. **Flow before → after:** a plain-text diagram (renders everywhere; no Mermaid in terminal output),
-   behaviour-change table, blast radius (callers updated / not updated).
-3. **Reading order:** files ranked by importance with a reason each, a "Start here" diff snippet; skippable files listed.
-4. **Per-change "why":** each meaningful change tied back to the intent; flag changes that don't tie back; test map.
-5. **Risk hotspots:** the few places a human must think, each with a concrete question to ask.
-6. **Review findings:** short, last, prioritized (bugs > risks > style), each paste-ready as a PR comment.
+1. **In short:** what changes and why, followable without knowing the codebase, plus a plain call.
+2. **What was wrong / What's new:** one concrete example of the old behaviour and its cause.
+3. **How it works now:** the idea in one sentence, the same example through the new code, design reasons,
+   a small text diagram (no Mermaid: it doesn't render in terminals); unrelated changes called out.
+4. **Where to look:** a few files in order, plus what to skip.
+5. **What I'd double-check:** open questions only a person can answer.
+6. **Problems:** confirmed defects as paste-ready PR comments with the proving line.
+Appendix **The numbers:** exact size, callers (from the call graph), tests.
+
+The explanation (1-3) stays under ~300 words with no line numbers. Motto: human-understandable, not AI slop.
 
 `prompts/review.md` is the single source of truth for this format. Every integration (the Claude Code
 skill, Codex, the GitHub Action) must use that prompt rather than keep its own copy.

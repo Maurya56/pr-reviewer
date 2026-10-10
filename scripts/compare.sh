@@ -69,7 +69,7 @@ def row(label, d):
             f"| {d.get('num_turns', 0)} | {d.get('duration_ms', 0) / 1000:.0f}s | {len(text.split()):,} |")
 
 plain, explain = load("plain"), load("explain-pr")
-used_skill = explain is not None and "TL;DR" in explain.get("result", "")
+used_skill = explain is not None and "## In short" in explain.get("result", "")
 
 summary = f"""# Review comparison: `{branch}` vs `{base}`
 

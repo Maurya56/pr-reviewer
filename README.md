@@ -18,37 +18,35 @@ emoji checklists, no sentence that would be true of any PR.
 ## Measured, not claimed
 
 On a real merged PR (pallets/click #3818, a Ctrl-C race fix), same model, same read-only tools,
-run with [`scripts/compare.sh`](scripts/compare.sh):
+run with [`scripts/compare.sh`](scripts/compare.sh). Read both reviews side by side in
+[examples/click-pr-3818](examples/click-pr-3818/):
 
 | | Plain Claude review | pr-reviewer |
 | --- | --- | --- |
-| Input tokens | 145k | **61k** |
-| Cost | $0.19 | **$0.14** |
-| Tool turns | 9 | **5** |
-| Praise and filler words ("excellent", "comprehensive", ✅ ...) | 34 | **1** |
+| Cost | $0.17 | **$0.10** |
+| Time | 103s | **46s** |
+| Length | 1,006 words | **554 words** |
+| Praise and filler words ("excellent", "comprehensive", ✅ ...) | 18 | **1** |
 | Callers of the changed function, with file and line | not covered | **both found** |
 
 One PR, one run each, so read it as direction, not an average. Run it on your own PRs (below).
 
 ## What you get
 
-Every review opens with a one-line **TL;DR and verdict** (Ready / Ready after fixes / Needs
-discussion) and the PR's real size ("1,076 lines, of which 380 are logic in 4 files"), then six
-sections:
+A review that reads like a teammate walking you through the PR, not a report:
 
-1. **Intent:** 2-3 sentences on what the PR is trying to do.
-2. **Flow: before → after:** a text diagram that renders anywhere (terminal, editor, GitHub),
-   a table of behaviour changes (input, before, after), and the blast radius: who calls the
-   changed code, and which callers the PR didn't update.
-3. **Reading order:** files ranked by importance, with why to read each, and the 5-12 lines that
-   are the heart of the change. Lockfiles, renames, formatting, and generated code are listed
-   as skippable.
-4. **Per-change "why":** each meaningful change tied back to the intent. Changes that *don't*
-   tie back are flagged. A test map shows which changed functions have tests.
-5. **Risk hotspots:** the few places that need real thought, each with a concrete question
-   (e.g. *"What happens if the connection drops mid-batch?"*).
-6. **Review findings:** short and prioritized (bugs > risks > style), each written so you can
-   paste it as a PR comment.
+- **In short:** what changes and why, in words someone outside the codebase follows, and a
+  plain call: "Safe to merge", "Good to merge once X is fixed", or "Worth talking through X".
+- **What was wrong** (or **What's new**): one concrete example of the old behaviour, and why
+  it happened.
+- **How it works now:** the idea in one sentence, then the same example traced through the new
+  code, with the reason for each design choice and a small text diagram that renders anywhere.
+  Changes unrelated to the goal are called out.
+- **Where to look:** the few files worth opening, in order, and what you can skip.
+- **What I'd double-check:** only open questions a person has to decide.
+- **Problems:** confirmed defects, each written as a PR comment with the line that proves it.
+- **The numbers:** exact size, who calls the changed code (and which callers the PR didn't
+  update), and which changes have tests, kept at the end for whoever wants them.
 
 ## Quick start (Claude Code)
 

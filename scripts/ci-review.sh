@@ -28,7 +28,7 @@ if [ -n "$model" ]; then args+=(--model "$model"); fi
 claude "${args[@]}" < "$work/prompt.md" > "$work/result.json"
 
 # Drop any preamble ("Now I have the context...") the model wrote before the review proper.
-review="$(jq -r '.result // ""' "$work/result.json" | awk '/\*\*TL;DR:\*\*/ { found = 1 } found')"
+review="$(jq -r '.result // ""' "$work/result.json" | awk '/^## In short/ { found = 1 } found')"
 if [ -z "${review// /}" ]; then
   echo "ci-review.sh: Claude returned an empty review" >&2
   jq '{subtype, is_error, num_turns, permission_denials}' "$work/result.json" >&2 || true
