@@ -34,3 +34,8 @@ pnpm-debug.log*
 
 # Tree-sitter grammars copied at build time
 grammars/
+
+# Eval: per-PR repos and raw results
+eval/.cache/
+eval/results/
+__pycache__/
