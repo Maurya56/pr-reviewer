@@ -1,5 +1,5 @@
 ---
-description: Deep walkthrough of the current branch's PR for a human reviewer: every change explained in turn, with examples, edge cases, design choices, and what each test proves, then prioritized findings. Use when asked for a deep, detailed, or thorough explanation of a PR or branch.
+description: "Deep walkthrough of the current branch's PR for a human reviewer: every change explained in turn, with examples, edge cases, design choices, and what each test proves, then prioritized findings. Use when asked for a deep, detailed, or thorough explanation of a PR or branch."
 argument-hint: "[base-branch]"
 ---
 

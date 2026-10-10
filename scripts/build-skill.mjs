@@ -32,6 +32,8 @@ const VARIANTS = [
   },
 ];
 
+// Frontmatter values are written as JSON strings, which are valid YAML: a bare description with
+// ": " in it is invalid YAML, and strict parsers drop the whole command.
 const body = (depth) => `<!-- GENERATED from prompts/review.md by \`npm run build:skill\`. Do not edit by hand. -->
 
 Review the current branch as a pull request. **Base branch:** \`$ARGUMENTS\` (if empty, use \`main\`). **Depth: ${depth}.**
@@ -43,14 +45,14 @@ for (const { name, depth, description } of VARIANTS) {
   const outputs = {
     [`skills/${name}/SKILL.md`]: `---
 name: ${name}
-description: ${description}
+description: ${JSON.stringify(description)}
 argument-hint: "[base-branch]"
 allowed-tools: ${allowedTools}
 ---
 
 ${body(depth)}`,
     [`commands/${name}.md`]: `---
-description: ${description}
+description: ${JSON.stringify(description)}
 argument-hint: "[base-branch]"
 allowed-tools: ${allowedTools}
 ---
@@ -59,7 +61,7 @@ ${body(depth)}`,
     // Codex custom prompt (~/.codex/prompts/<name>.md). Codex has no allowed-tools; its sandbox and
     // approval settings decide what the review may run.
     [`integrations/codex/${name}.md`]: `---
-description: ${description}
+description: ${JSON.stringify(description)}
 argument-hint: "[base-branch]"
 ---
 

@@ -21,4 +21,14 @@ describe.each(ENTRY_POINTS)("%s", (path, depth) => {
   it(`asks for depth ${depth}`, () => {
     expect(read(path)).toContain(`**Depth: ${depth}.**`);
   });
+
+  // A bare value containing ": " is invalid YAML, and strict parsers then drop the whole command
+  // (the deep variant's description did this once).
+  it("has valid frontmatter: no unquoted value contains ': '", () => {
+    const frontmatter = read(path).split("---")[1] ?? "";
+    for (const line of frontmatter.trim().split("\n")) {
+      const value = line.slice(line.indexOf(":") + 1).trim();
+      if (!value.startsWith('"')) expect(value, line).not.toContain(": ");
+    }
+  });
 });
