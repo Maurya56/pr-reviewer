@@ -32,13 +32,14 @@ skill, Codex, the GitHub Action) must use that prompt rather than keep its own c
 - **Phase 0 (current):** the prompt plus the Claude Code slash command.
 - **Phase 1:** `npx pr-reviewer context`. Get the diff, filter noise hunks, cluster related hunks,
   emit a compact context file. Measure token savings against the raw diff.
+- **Phase 1.5:** repo knowledge (design in `docs/knowledge.md`).
 - **Phase 2:** tree-sitter call-graph context (changed functions plus 1-hop callers/callees), TS and Python
   first, then Go and C/C++. Resolve cross-repo symbols the same way the prompt does (Step 2b), using
   `.pr-reviewer.json`.
 - **Phase 3:** Claude Code plugin (done), Codex prompt/AGENTS.md recipe, GitHub Action that posts a PR comment.
 
-`.pr-reviewer.json` (in the reviewed repo) is the one config format for cross-repo context. The prompt
-documents it in Step 2b; any CLI code that reads it must follow that schema.
+`.pr-reviewer.json` (in the reviewed repo) is the one config format, for cross-repo context and (Phase 1.5)
+the `knowledge` field. The prompt documents it in Step 2b; any CLI code that reads it must follow that schema.
 
 ## Conventions
 
@@ -48,3 +49,5 @@ documents it in Step 2b; any CLI code that reads it must follow that schema.
 - Keep the noise list in `src/filter.ts` and `prompts/review.md` in sync.
 - Conventional commits (`feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`).
 - Don't commit unless asked.
+
+## Known pitfalls
