@@ -39,6 +39,55 @@ thought. Do not produce a flat list of nitpicks.
 - Prefer targeted reads (a function, a line range) over whole files.
 - Stop reading once you can explain the change. Do not explore the repo for its own sake.
 
+## Step 2b: Cross-repo context
+
+Code the PR depends on, or code that depends on the PR, may live in other repositories. Read
+it only when it changes your understanding of the change. Never explore it for its own sake.
+
+**Config (optional):** `.pr-reviewer.json` at the repo root.
+
+```json
+{
+  "importedAs": ["@acme/api"],
+  "repos": [
+    { "name": "core", "path": "../core", "importedAs": ["@acme/core", "acme_core", "github.com/acme/core", "acme/core/"] },
+    { "name": "web", "path": "~/work/web" }
+  ]
+}
+```
+
+- Top-level `importedAs`: how other repos import *this* repo (used for the downstream search).
+- `repos[].path`: a local checkout, relative to the repo root or absolute (`~` allowed).
+- `repos[].importedAs`: how this repo imports *that* repo: npm package names, Python top-level
+  modules, Go module paths, or C/C++ include prefixes. Omit it for repos that only consume this one.
+
+**Upstream: code the PR calls into.** When a changed hunk depends on a symbol from another
+repo and you need its contract to judge the change, read its source from the first of these
+that exists. The earlier ones are the version this repo actually builds against:
+
+1. Inside this repo: a git submodule or vendored copy (`vendor/`, `third_party/`, `external/`).
+2. The installed package: `node_modules/<pkg>/` (prefer `src/` or `.d.ts` over bundled output);
+   `.venv/lib/python*/site-packages/<module>/` (or `venv/`); for Go,
+   `$(go env GOMODCACHE)/<module>@<version>/` with the version from `go.mod`; for C/C++, the
+   include paths in `compile_commands.json` or the build files.
+3. The repo's checkout from `.pr-reviewer.json`. It may be at a different commit than the
+   version this repo pins (lockfile, `go.mod`, submodule SHA). If the pinned version differs
+   from `git -C <path> log -1 --format='%h %d'`, say so next to anything you cite from it.
+4. None of these: do not guess its behaviour. List the symbol under **Not reviewed** in
+   section 3 and, if it matters, ask about it as a hotspot question.
+
+Read the smallest thing that answers the question: signature and docstring first, the body
+only if behaviour matters. At most 5 external symbols per review.
+
+**Downstream: code that uses what the PR changes.** Only when `.pr-reviewer.json` lists repos
+and sets the top-level `importedAs`. If the PR removes, renames, or changes the signature or
+behaviour of an exported symbol (TS `export`, a public Python name, a capitalized Go identifier,
+a declaration in a public header), Grep each listed repo's `path` for that symbol, limited to
+files that import this repo (match its `importedAs` prefixes). Per repo, report the number of
+usages and up to 3 `path:line` examples that would break: in section 5 if it needs judgment,
+in section 6 Risks if the break is certain (name the breaking call). At most 5 changed symbols.
+If a checkout looks stale, say so. Do not fetch or pull.
+
 ## Step 3: Write the review
 
 Use exactly the six sections below, in order. Keep each one short and scannable. Use bullets,
@@ -68,7 +117,8 @@ flowchart LR
 
 **Skippable:** `package-lock.json` (lockfile), `src/old.ts → src/new.ts` (rename only), ...
 
-**Not reviewed:** `path` (<why you did not read its diff, e.g. size>), ... (omit if none)
+**Not reviewed:** `path` (<why you did not read its diff, e.g. size>), `pkg.symbol` (external
+source not found locally), ... (omit if none)
 
 ## 4. Per-change "why"
 - `path:line` - <change> → <how it serves the intent>
