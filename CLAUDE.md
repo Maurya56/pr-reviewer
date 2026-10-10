@@ -20,7 +20,8 @@ skill, Codex, the GitHub Action) must use that prompt rather than keep its own c
 ## Layout
 
 - `prompts/review.md`: the review prompt
-- `.claude/skills/explain-pr/SKILL.md`: the `/explain-pr [base-branch]` command (a thin wrapper around the prompt)
+- `skills/explain-pr/SKILL.md`: the `/explain-pr [base-branch]` command (a thin wrapper around the prompt)
+- `.claude-plugin/`: plugin and marketplace manifests; the whole repo is the plugin, so `prompts/` ships with it
 - `src/`: Phase 1 CLI (`diff.ts` parse git diff, `filter.ts` drop noise, `context.ts` cluster and render, `cli.ts` entry point)
 - `test/`: vitest tests
 - `integrations/`: per-agent setup (Codex, later the GitHub Action)

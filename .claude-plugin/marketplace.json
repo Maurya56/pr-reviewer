@@ -1,0 +1,16 @@
+{
+  "name": "pr-reviewer",
+  "owner": {
+    "name": "Maurya"
+  },
+  "metadata": {
+    "description": "pr-reviewer: explain-first PR reviews for Claude Code."
+  },
+  "plugins": [
+    {
+      "name": "pr-reviewer",
+      "source": "./",
+      "description": "Explain a PR for a human reviewer, then give short prioritized findings."
+    }
+  ]
+}

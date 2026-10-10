@@ -1,0 +1,10 @@
+{
+  "name": "pr-reviewer",
+  "version": "0.1.0",
+  "description": "Make PRs reviewable by humans: explain the change first (intent, before/after flow, reading order, risk hotspots), then give short prioritized findings.",
+  "author": {
+    "name": "Maurya"
+  },
+  "repository": "https://github.com/Maurya56/pr-reviewer",
+  "license": "MIT"
+}
