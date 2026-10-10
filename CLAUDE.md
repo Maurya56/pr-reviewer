@@ -68,3 +68,5 @@ the `knowledge` field. The prompt documents it in Step 2b; any CLI code that rea
 
 - After editing `prompts/review.md`, run `npm run build:skill`, or the skill keeps serving the old prompt.
 - Never run `scripts/compare.sh` inside this repo: the plain review reads CLAUDE.md and copies the format.
+- Bump `version` in `.claude-plugin/plugin.json` (and `package.json`) whenever skills, commands, or the prompt change:
+  Claude Code caches installed plugins by version, so an unchanged version can keep serving the old files.
