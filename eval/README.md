@@ -7,7 +7,7 @@ product change.
   `cases`; the case names are at the bottom of the file). Five are tangled (10+ files, refactor
   mixed with features), four are known-buggy (merged, later fixed by another PR, recorded under
   `fix`; C9's bug was found by a deep review), and the rest were picked for a single case, including an AI-agent PR with the issue it was
-  asked to solve (`ask`) and a C++ PR. 12 of the 17 were merged after the model's training
+  asked to solve (`ask`) and a C++ PR. 11 of the 17 were merged after the model's training
   cutoff.
 - `<id>/questions.md`: 3-5 comprehension questions with answers and scoring rubrics, and for
   buggy PRs the known bug, quoted from the fix commit.
