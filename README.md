@@ -290,4 +290,4 @@ Claude Code caches installed plugins by version.
 
 ## License
 
-[MIT](LICENSE) © Maurya
+[MIT](LICENSE) © theaiowlandswan
