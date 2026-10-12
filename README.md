@@ -106,10 +106,12 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-      - uses: theaiowlandswan/pr-reviewer@main
+      - uses: theaiowlandswan/pr-reviewer@v0.2.0
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
+
+`@v0.2.0` pins a release ([changelog](CHANGELOG.md)); `@main` follows the latest commit.
 
 | Input | Default | Meaning |
 | --- | --- | --- |
